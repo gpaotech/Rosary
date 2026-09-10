@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Multilingual Rosary</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #e74c3c; --bg: #f9f6f0; --text: #333; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { background: var(--bg); color: var(--text); padding: 15px; min-height: 100vh; display: flex; flex-direction: column; }
+        .hidden { display: none !important; }
+        .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 15px; }
+        button { background: var(--primary); color: white; border: none; padding: 14px 24px; border-radius: 8px; font-size: 1.1rem; width: 100%; cursor: pointer; margin-top: 10px; font-weight: 600; }
+        button.secondary { background: #ecf0f1; color: var(--text); }
+        button:disabled { opacity: 0.5; }
+        select, input { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; background: white; }
+        label { font-weight: 600; display: block; margin-bottom: 5px; font-size: 0.9rem; color: #666; }
+        #prayer-display { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0; }
+        .prayer-text { background: #fdfbf7; padding: 15px; border-radius: 8px; border-left: 4px solid var(--accent); min-height: 150px; }
+        .prayer-text h3 { font-size: 0.8rem; color: #999; text-transform: uppercase; margin-bottom: 8px; }
+        .prayer-text p { font-size: 1.2rem; line-height: 1.6; }
+        #mystery-banner { background: var(--primary); color: white; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 15px; }
+        #mystery-banner h2 { font-size: 1.3rem; margin-bottom: 5px; }
+        #mystery-banner .mystery-desc { font-size: 0.9rem; opacity: 0.9; font-style: italic; }
+        .rosary-line { display: flex; justify-content: center; gap: 6px; margin: 20px 0; flex-wrap: wrap; }
+        .bead { width: 18px; height: 18px; border-radius: 50%; background: #ddd; transition: all 0.3s; }
+        .bead.active { background: var(--accent); transform: scale(1.3); box-shadow: 0 0 8px rgba(231,76,60,0.6); }
+        .bead.passed { background: #bdc3c7; }
+        .controls { display: flex; gap: 10px; align-items: center; }
+        .controls button { margin-top: 0; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align: center; }
+        .stat-box { background: #f8f9fa; padding: 15px; border-radius: 8px; }
+        .stat-box .number { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
+        .stat-box .label { font-size: 0.8rem; color: #666; }
+        .toggle-group { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .toggle-group input[type="checkbox"] { width: auto; margin: 0; transform: scale(1.3); }
+        @media (max-width: 600px) { #prayer-display { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <!-- SETUP SCREEN -->
+    <div id="setup-screen">
+        <div class="card">
+            <h1 style="text-align:center; margin-bottom:20px;">🌹 Rosary</h1>
+            <label>Language 1 (Left Column)</label>
+            <select id="lang1">
+                <option value="la">Latin</option>
+                <option value="fr" selected>French</option>
+                <option value="en">English</option>
+                <option value="th">Thai</option>
+            </select>
+            <label>Language 2 (Right Column)</label>
+            <select id="lang2">
+                <option value="la" selected>Latin</option>
+                <option value="fr">French</option>
+                <option value="en">English</option>
+                <option value="th">Thai</option>
+            </select>
+            <label>Mystery Set</label>
+            <select id="mystery-select">
+                <option value="joyful">Joyful Mysteries (Full)</option>
+                <option value="sorrowful">Sorrowful Mysteries (Full)</option>
+                <option value="glorious">Glorious Mysteries (Full)</option>
+                <option value="traditional">Traditional Set (Joyful+Sorrowful+Glorious)</option>
+            </select>
+            <div class="toggle-group">
+                <label>Voice Guide (Language 1)</label>
+                <input type="checkbox" id="voice-toggle">
+            </div>
+            <button onclick="startRosary()">Start Rosary</button>
+            <button class="secondary" style="margin-top:10px;" onclick="showStats()">📊 View Stats</button>
+        </div>
+    </div>
+
+    <!-- PRAYER SCREEN -->
+    <div id="prayer-screen" class="hidden">
+        <div id="mystery-banner">
+            <h2 id="mystery-title">Mystery</h2>
+            <div class="mystery-desc" id="mystery-desc"></div>
+        </div>
+        <div id="prayer-display">
+            <div class="prayer-text"><h3 id="lang-label1">Language 1</h3><p id="text1"></p></div>
+            <div class="prayer-text"><h3 id="lang-label2">Language 2</h3><p id="text2"></p></div>
+        </div>
+        <div class="rosary-line" id="rosary-line"></div>
+        <div class="controls">
+            <button id="next-btn" onclick="nextStep()" style="flex:2;">Next ➔</button>
+            <button id="auto-btn" class="secondary" onclick="toggleAuto()" style="flex:1;">Auto: OFF</button>
+        </div>
+        <div style="text-align:center; margin-top:10px; color:#888; font-size:0.9rem;" id="progress-text">Step 1 / 100</div>
+    </div>
+
+    <!-- STATS SCREEN -->
+    <div id="stats-screen" class="hidden">
+        <div class="card">
+            <h2 style="text-align:center; margin-bottom:15px;">Your Rosary Stats</h2>
+            <div class="stats-grid">
+                <div class="stat-box"><div class="number" id="stat-week">0</div><div class="label">Last 7 Days</div></div>
+                <div class="stat-box"><div class="number" id="stat-month">0</div><div class="label">Last 30 Days</div></div>
+                <div class="stat-box"><div class="number" id="stat-total">0</div><div class="label">Total Sessions</div></div>
+                <div class="stat-box"><div class="number" id="stat-time">0m</div><div class="label">Total Time</div></div>
+            </div>
+            <button class="secondary" style="margin-top:15px;" onclick="backToSetup()">Back to Setup</button>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA ---
+        const rosaryData = {
+            prayers: {
+                signumCrucis: { la: "In nomine Patris, et Filii, et Spiritus Sancti. Amen.", fr: "Au nom du Père, et du Fils, et du Saint-Esprit. Amen.", en: "In the name of the Father, and of the Son, and of the Holy Spirit. Amen.", th: "เดชะพระนาม พระบิดา และพระบุตร และพระจิต อาแมน" },
+                credo: { la: "Credo in Deum Patrem omnipotentem, Creatorem caeli et terrae...", fr: "Je crois en Dieu, le Père tout-puissant, créateur du ciel et de la terre...", en: "I believe in God, the Father almighty, Creator of heaven and earth...", th: "ข้าพเจ้าเชื่อในพระเจ้า พระบิดาผู้ทรงสรรพานุภาพ ทรงเนรมิตฟ้าดิน..." },
+                paterNoster: { la: "Pater Noster, qui es in caelis, sanctificetur nomen tuum...", fr: "Notre Père, qui es aux cieux, que ton nom soit sanctifié...", en: "Our Father, Who art in heaven, hallowed be Thy name...", th: "ข้าแต่พระบิดาของข้าพเจ้าทั้งหลาย พระองค์สถิตในสวรรค์..." },
+                aveMaria: { la: "Ave Maria, gratia plena, Dominus tecum...", fr: "Je vous salue, Marie, pleine de grâce, le Seigneur est avec vous...", en: "Hail Mary, full of grace, the Lord is with thee...", th: "วันทามารีย์ เปี่ยมด้วยพระหรรษทาน พระเจ้าสถิตกับท่าน..." },
+                gloriaPatri: { la: "Gloria Patri, et Filio, et Spiritui Sancto...", fr: "Gloire au Père, au Fils et au Saint-Esprit...", en: "Glory be to the Father, and to the Son, and to the Holy Spirit...", th: "พระสิริรุ่งโรจน์แด่พระบิดา และพระบุตร และพระจิต..." },
+                fatimaPrayer: { la: "Domine Iesu, dimitte nobis debita nostra...", fr: "Ô mon Jésus, pardonnez-nous nos péchés...", en: "O my Jesus, forgive us our sins...", th: "โอ้พระเยซูเจ้า โปรดอภัยบาปของข้าพเจ้าทั้งหลาย..." },
+                salveRegina: { la: "Salve, Regina, Mater misericordiae...", fr: "Salut, ô Reine, Mère de miséricorde...", en: "Hail, holy Queen, Mother of mercy...", th: "วันทาพระราชินี พระมารดาแห่งพระเมตตา..." }
+            },
+            mysteries: {
+                joyful: {
+                    name: { la: "Mysteria Gaudiosa", fr: "Mystères Joyeux", en: "Joyful Mysteries", th: "ธรรมล้ำลึกแห่งความปีติยินดี" },
+                    items: [
+                        { la: "Annuntiatio", fr: "L'Annonciation", en: "The Annunciation", th: "ทูตสวรรค์แจ้งข่าว" },
+                        { la: "Visitatio", fr: "La Visitation", en: "The Visitation", th: "การเสด็จเยี่ยม" },
+                        { la: "Nativitas", fr: "La Nativité", en: "The Nativity", th: "การประสูติ" },
+                        { la: "Praesentatio", fr: "La Présentation", en: "The Presentation", th: "การถวายพระกุมาร" },
+                        { la: "Inventio in Templo", fr: "Le Recouvrement", en: "The Finding in the Temple", th: "การค้นพบในพระวิหาร" }
+                    ]
+                },
+                sorrowful: {
+                    name: { la: "Mysteria Dolorosa", fr: "Mystères Douloureux", en: "Sorrowful Mysteries", th: "ธรรมล้ำลึกแห่งความทุกข์ทรมาน" },
+                    items: [
+                        { la: "Agonia in Horto", fr: "L'Agonie", en: "The Agony in the Garden", th: "ความทุกข์ในสวน" },
+                        { la: "Flagellatio", fr: "La Flagellation", en: "The Scourging at the Pillar", th: "การโบยตี" },
+                        { la: "Coronatio Spinis", fr: "Le Couronnement d'Épines", en: "The Crowning with Thorns", th: "การสวมมงกุฎหนาม" },
+                        { la: "Baiulatio Crucis", fr: "Le Portement de Croix", en: "The Carrying of the Cross", th: "การแบกกางเขน" },
+                        { la: "Crucifixio", fr: "Le Crucifiement", en: "The Crucifixion", th: "การตรึงกางเขน" }
+                    ]
+                },
+                glorious: {
+                    name: { la: "Mysteria Gloriosa", fr: "Mystères Glorieux", en: "Glorious Mysteries", th: "ธรรมล้ำลึกแห่งพระสิริรุ่งโรจน์" },
+                    items: [
+                        { la: "Resurrectio", fr: "La Résurrection", en: "The Resurrection", th: "การกลับคืนพระชนม์" },
+                        { la: "Ascensio", fr: "L'Ascension", en: "The Ascension", th: "การเสด็จขึ้นสวรรค์" },
+                        { la: "Pentecoste", fr: "La Pentecôte", en: "The Descent of the Holy Spirit", th: "การเสด็จลงของพระจิต" },
+                        { la: "Assumptio", fr: "L'Assomption", en: "The Assumption", th: "การรับพระนางขึ้นสวรรค์" },
+                        { la: "Coronatio Mariae", fr: "Le Couronnement de Marie", en: "The Coronation of Mary", th: "การสวมมงกุฎพระนาง" }
+                    ]
+                }
+            }
+        };
+
+        // --- STATE ---
+        let state = {
+            steps: [], currentIndex: 0, lang1: 'la', lang2: 'fr',
+            voiceOn: false, autoMode: false, autoInterval: null,
+            startTime: null, autoTimeSeconds: 10, isDecade: false
+        };
+
+        const $ = id => document.getElementById(id);
+
+        function buildSteps(mysteryChoice) {
+            const steps = [];
+            const add = (prayerKey, mysteryData = null) => {
+                steps.push({ prayerKey, mysteryData });
+            };
+
+            add('signumCrucis'); add('credo'); add('paterNoster');
+            add('aveMaria'); add('aveMaria'); add('aveMaria'); add('gloriaPatri');
+
+            let setsToPray = [];
+            if (mysteryChoice === 'traditional') setsToPray = ['joyful', 'sorrowful', 'glorious'];
+            else setsToPray = [mysteryChoice];
+
+            setsToPray.forEach(setKey => {
+                const set = rosaryData.mysteries[setKey];
+                set.items.forEach((item, idx) => {
+                    add('paterNoster', { setKey, itemIndex: idx, title: item });
+                    for (let i = 0; i < 10; i++) add('aveMaria', { setKey, itemIndex: idx, title: item });
+                    add('gloriaPatri', { setKey, itemIndex: idx, title: item });
+                    add('fatimaPrayer', { setKey, itemIndex: idx, title: item });
+                });
+            });
+
+            add('salveRegina'); add('signumCrucis');
+            return steps;
+        }
+
+        function renderStep() {
+            const step = state.steps[state.currentIndex];
+            if (!step) return finishRosary();
+
+            const langNames = { la: 'Latin', fr: 'Français', en: 'English', th: 'ไทย' };
+            $('lang-label1').textContent = langNames[state.lang1];
+            $('lang-label2').textContent = langNames[state.lang2];
+
+            $('text1').textContent = rosaryData.prayers[step.prayerKey][state.lang1];
+            $('text2').textContent = rosaryData.prayers[step.prayerKey][state.lang2];
+
+            const banner = $('mystery-banner');
+            if (step.mysteryData) {
+                const mysteryItem = step.mysteryData.title;
+                $('mystery-title').textContent = mysteryItem[state.lang1] + ' / ' + mysteryItem[state.lang2];
+                banner.classList.remove('hidden');
+            } else {
+                banner.classList.add('hidden');
+            }
+
+            // Rosary beads
+            const beadContainer = $('rosary-line');
+            beadContainer.innerHTML = '';
+            let decadesPassed = 0;
+            for (let i = 0; i < state.currentIndex; i++) {
+                if (state.steps[i].prayerKey === 'paterNoster' && state.steps[i].mysteryData) decadesPassed++;
+            }
+            const totalDecades = state.steps.filter(s => s.prayerKey === 'paterNoster' && s.mysteryData).length;
+            for (let i = 0; i < totalDecades; i++) {
+                const bead = document.createElement('div');
+                bead.className = 'bead' + (i < decadesPassed ? ' passed' : i === decadesPassed ? ' active' : '');
+                beadContainer.appendChild(bead);
+            }
+
+            $('progress-text').textContent = `Step ${state.currentIndex + 1} / ${state.steps.length}`;
+            $('next-btn').disabled = false;
+
+            clearInterval(state.autoInterval);
+            state.isDecade = (step.prayerKey === 'aveMaria');
+            if (state.autoMode && state.isDecade) {
+                $('auto-btn').textContent = `Auto: ${state.autoTimeSeconds}s`;
+                state.autoInterval = setInterval(() => nextStep(), state.autoTimeSeconds * 1000);
+            } else {
+                $('auto-btn').textContent = state.autoMode ? 'Auto: ON' : 'Auto: OFF';
+            }
+
+            if (state.voiceOn) speak(rosaryData.prayers[step.prayerKey][state.lang1], state.lang1);
+        }
+
+        function speak(text, lang) {
+            if (!window.speechSynthesis) return;
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = lang === 'la' ? 'it-IT' : lang === 'fr' ? 'fr-FR' : lang === 'th' ? 'th-TH' : 'en-US';
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function nextStep() {
+            clearInterval(state.autoInterval);
+            state.currentIndex++;
+            if (state.currentIndex >= state.steps.length) return finishRosary();
+            renderStep();
+        }
+
+        function finishRosary() {
+            clearInterval(state.autoInterval);
+            if (state.voiceOn) window.speechSynthesis.cancel();
+            const duration = Math.round((Date.now() - state.startTime) / 1000);
+            saveSession(duration);
+            alert(`Rosary completed in ${Math.floor(duration / 60)}m ${duration % 60}s!`);
+            backToSetup();
+        }
+
+        function saveSession(duration) {
+            const sessions = JSON.parse(localStorage.getItem('rosarySessions') || '[]');
+            sessions.push({ date: new Date().toISOString(), duration });
+            localStorage.setItem('rosarySessions', JSON.stringify(sessions));
+        }
+
+        function toggleAuto() {
+            state.autoMode = !state.autoMode;
+            renderStep();
+        }
+
+        function startRosary() {
+            state.lang1 = $('lang1').value;
+            state.lang2 = $('lang2').value;
+            state.voiceOn = $('voice-toggle').checked;
+            const mysteryChoice = $('mystery-select').value;
+            state.steps = buildSteps(mysteryChoice);
+            state.currentIndex = 0;
+            state.startTime = Date.now();
+            $('setup-screen').classList.add('hidden');
+            $('prayer-screen').classList.remove('hidden');
+            renderStep();
+        }
+
+        function backToSetup() {
+            clearInterval(state.autoInterval);
+            $('prayer-screen').classList.add('hidden');
+            $('stats-screen').classList.add('hidden');
+            $('setup-screen').classList.remove('hidden');
+        }
+
+        function showStats() {
+            const sessions = JSON.parse(localStorage.getItem('rosarySessions') || '[]');
+            const now = new Date();
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+            const weekCount = sessions.filter(s => new Date(s.date) > weekAgo).length;
+            const monthCount = sessions.filter(s => new Date(s.date) > monthAgo).length;
+            const totalTime = sessions.reduce((acc, s) => acc + s.duration, 0);
+
+            $('stat-week').textContent = weekCount;
+            $('stat-month').textContent = monthCount;
+            $('stat-total').textContent = sessions.length;
+            $('stat-time').textContent = Math.round(totalTime / 60) + 'm';
+
+            $('setup-screen').classList.add('hidden');
+            $('stats-screen').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
