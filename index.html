@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Multilingual Rosary</title>
+    <<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Multilingual Rosary</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #e74c3c; --bg: #f9f6f0; --text: #333; --gold: #f1c40f; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { background: var(--bg); color: var(--text); padding: 10px; min-height: 100vh; display: flex; flex-direction: column; }
+        .hidden { display: none !important; }
+        .card { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 10px; }
+        button { background: var(--primary); color: white; border: none; padding: 12px 18px; border-radius: 8px; font-size: 1rem; width: 100%; cursor: pointer; margin-top: 8px; font-weight: 600; }
+        button.secondary { background: #ecf0f1; color: var(--text); }
+        button.danger { background: var(--accent); }
+        button:disabled { opacity: 0.5; }
+        select, input { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; background: white; }
+        label { font-weight: 600; display: block; margin-bottom: 5px; font-size: 0.9rem; color: #666; }
+        
+        /* Prayer Layout */
+        #prayer-display { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
+        .prayer-text { background: #fdfbf7; padding: 12px; border-radius: 8px; border-left: 4px solid var(--accent); height: 220px; overflow-y: auto; }
+        .prayer-text h3 { font-size: 0.75rem; color: #999; text-transform: uppercase; margin-bottom: 5px; }
+        .prayer-text p { font-size: 1.05rem; line-height: 1.5; }
+        
+        /* Mystery Banner */
+        #mystery-banner { background: var(--primary); color: white; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 10px; }
+        #mystery-banner h2 { font-size: 1.1rem; margin-bottom: 4px; }
+        #mystery-banner .mystery-desc { font-size: 0.85rem; opacity: 0.9; font-style: italic; }
+        
+        /* Intro Comment */
+        #intro-comment { background: #fff9e6; border: 1px dashed #f1c40f; padding: 10px; border-radius: 8px; margin-bottom: 10px; font-size: 0.9em; text-align: center; color: #555; }
+
+        /* Mystery Image */
+        .mystery-image-container { text-align: center; margin-bottom: 15px; }
+        .mystery-image-container svg { width: 100px; height: 100px; }
+
+        /* Rosary Beads Visual */
+        .rosary-container { width: 100%; overflow-x: auto; padding: 15px 0; background: white; border-radius: 8px; margin-bottom: 10px; box-shadow: inset 0 0 5px rgba(0,0,0,0.05); }
+        .rosary-scroll { display: flex; align-items: center; gap: 8px; padding: 0 15px; width: max-content; margin: 0 auto; }
+        .bead-group { display: flex; gap: 6px; align-items: center; }
+        .bead { width: 16px; height: 16px; border-radius: 50%; background: #ddd; transition: all 0.3s; flex-shrink: 0; }
+        .bead.small { width: 12px; height: 12px; }
+        .bead.large { width: 20px; height: 20px; background: #bdc3c7; }
+        .bead.crucifix { width: 24px; height: 24px; border-radius: 2px; background: #8e44ad; }
+        .bead.active { background: var(--accent); transform: scale(1.3); box-shadow: 0 0 10px rgba(231,76,60,0.6); z-index: 10; }
+        .bead.passed { background: var(--gold); }
+        .bead-connector { width: 15px; height: 2px; background: #ddd; }
+        
+        /* Controls */
+        .controls { display: flex; gap: 8px; align-items: center; }
+        .controls button { margin-top: 0; padding: 10px; font-size: 0.9rem; }
+        .icon-btn { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; background: #ecf0f1; color: var(--text); border-radius: 50%; padding: 0; flex-shrink: 0; }
+        .icon-btn.active { background: var(--primary); color: white; }
+        
+        /* Stats */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: center; }
+        .stat-box { background: #f8f9fa; padding: 12px; border-radius: 8px; }
+        .stat-box .number { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+        .stat-box .label { font-size: 0.75rem; color: #666; }
+        
+        .toggle-group { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .toggle-group input[type="checkbox"] { width: auto; margin: 0; transform: scale(1.3); }
+        
+        @media (max-width: 400px) { 
+            #prayer-display { grid-template-columns: 1fr; } 
+            .prayer-text { height: 200px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SETUP SCREEN -->
+    <div id="setup-screen">
+        <div class="card">
+            <h1 style="text-align:center; margin-bottom:15px;" id="app-title">🌹 Rosary</h1>
+            
+            <label id="label-lang1">Language 1 (Left Column)</label>
+            <select id="lang1">
+                <option value="la">Latin</option>
+                <option value="fr" selected>French</option>
+                <option value="en">English</option>
+                <option value="th">Thai</option>
+            </select>
+            
+            <label id="label-lang2">Language 2 (Right Column)</label>
+            <select id="lang2">
+                <option value="la" selected>Latin</option>
+                <option value="fr">French</option>
+                <option value="en">English</option>
+                <option value="th">Thai</option>
+            </select>
+
+            <label id="label-desclang">Description Language</label>
+            <select id="desc-lang" onchange="updateUILanguage()">
+                <option value="en" selected>English</option>
+                <option value="fr">Français</option>
+                <option value="la">Latin</option>
+                <option value="th">ไทย</option>
+            </select>
+            
+            <label id="label-mystery">Mystery Set</label>
+            <select id="mystery-select">
+                <option value="joyful">Joyful Mysteries</option>
+                <option value="sorrowful">Sorrowful Mysteries</option>
+                <option value="glorious">Glorious Mysteries</option>
+                <option value="luminous">Luminous Mysteries</option>
+                <option value="traditional">Full Traditional (Joyful + Sorrowful + Glorious)</option>
+                <option value="modern">Full Modern (All 4 Sets)</option>
+            </select>
+
+            <label id="label-automode">Ave Maria Advance Mode</label>
+            <select id="auto-mode-select">
+                <option value="manual">Manual (Tap Next)</option>
+                <option value="auto_10">Auto (10 seconds)</option>
+                <option value="auto_15">Auto (15 seconds)</option>
+            </select>
+
+            <div class="toggle-group">
+                <label id="label-voice">Voice Guide (Language 1)</label>
+                <input type="checkbox" id="voice-toggle" checked>
+            </div>
+            <button onclick="startRosary()" id="btn-start">Start Rosary</button>
+            <button class="secondary" style="margin-top:8px;" onclick="showStats()" id="btn-stats">📊 View Stats</button>
+        </div>
+    </div>
+
+    <!-- PRAYER SCREEN -->
+    <div id="prayer-screen" class="hidden">
+        <div id="mystery-banner">
+            <h2 id="mystery-title">Mystery</h2>
+            <div class="mystery-desc" id="mystery-desc"></div>
+        </div>
+        
+        <div id="intro-comment" class="hidden"></div>
+
+        <div class="rosary-container">
+            <div class="rosary-scroll" id="rosary-beads"></div>
+        </div>
+
+        <div id="prayer-display">
+            <div class="prayer-text" id="card1"><h3 id="lang-label1">Language 1</h3><p id="text1"></p></div>
+            <div class="prayer-text" id="card2"><h3 id="lang-label2">Language 2</h3><p id="text2"></p></div>
+        </div>
+
+        <div class="controls">
+            <button class="icon-btn" id="speaker-btn" onclick="toggleVoice()">🔊</button>
+            <button class="secondary" onclick="prevStep()" style="flex:1;" id="btn-back">⬅ Back</button>
+            <button class="danger" onclick="cancelRosary()" style="flex:1;" id="btn-cancel">✕ Cancel</button>
+            <button id="next-btn" onclick="nextStep()" style="flex:2;" id="btn-next">Next ➔</button>
+        </div>
+        <div style="text-align:center; margin-top:8px; color:#888; font-size:0.8rem;" id="progress-text">Step 1 / 100</div>
+    </div>
+
+    <!-- STATS SCREEN -->
+    <div id="stats-screen" class="hidden">
+        <div class="card">
+            <h2 style="text-align:center; margin-bottom:15px;" id="stats-title">Your Rosary Stats</h2>
+            <div class="stats-grid">
+                <div class="stat-box"><div class="number" id="stat-week">0</div><div class="label" id="stat-week-label">Last 7 Days</div></div>
+                <div class="stat-box"><div class="number" id="stat-month">0</div><div class="label" id="stat-month-label">Last 30 Days</div></div>
+                <div class="stat-box"><div class="number" id="stat-total">0</div><div class="label" id="stat-total-label">Total Sessions</div></div>
+                <div class="stat-box"><div class="number" id="stat-time">0m</div><div class="label" id="stat-time-label">Total Time</div></div>
+            </div>
+            <button class="secondary" style="margin-top:15px;" onclick="backToSetup()" id="btn-back-setup">Back to Setup</button>
+        </div>
+    </div>
+
+    <script>
+        // --- TRANSLATIONS FOR UI ---
+        const uiTranslations = {
+            en: {
+                title: "🌹 Rosary",
+                labelLang1: "Language 1 (Left Column)",
+                labelLang2: "Language 2 (Right Column)",
+                labelDescLang: "Description Language",
+                labelMystery: "Mystery Set",
+                labelAutoMode: "Ave Maria Advance Mode",
+                labelVoice: "Voice Guide (Language 1)",
+                btnStart: "Start Rosary",
+                btnStats: "📊 View Stats",
+                btnBack: "⬅ Back",
+                btnCancel: "✕ Cancel",
+                btnNext: "Next ➔",
+                statsTitle: "Your Rosary Stats",
+                statWeek: "Last 7 Days",
+                statMonth: "Last 30 Days",
+                statTotal: "Total Sessions",
+                statTime: "Total Time",
+                btnBackSetup: "Back to Setup",
+                autoManual: "Manual (Tap Next)",
+                auto10: "Auto (10 seconds)",
+                auto15: "Auto (15 seconds)",
+                mysteries: {
+                    joyful: "Joyful Mysteries",
+                    sorrowful: "Sorrowful Mysteries",
+                    glorious: "Glorious Mysteries",
+                    luminous: "Luminous Mysteries",
+                    traditional: "Full Traditional (Joyful + Sorrowful + Glorious)",
+                    modern: "Full Modern (All 4 Sets)"
+                },
+                signOfCross: "Sign of the Cross.",
+                settings: "Settings",
+                mysteriesLabel: "Mysteries",
+                confirmCancel: "Are you sure you want to cancel this Rosary?",
+                completed: "Rosary completed in"
+            },
+            fr: {
+                title: "🌹 Chapelet",
+                labelLang1: "Langue 1 (Colonne gauche)",
+                labelLang2: "Langue 2 (Colonne droite)",
+                labelDescLang: "Langue des descriptions",
+                labelMystery: "Groupe de mystères",
+                labelAutoMode: "Mode d'avancement des Ave Maria",
+                labelVoice: "Guide vocal (Langue 1)",
+                btnStart: "Commencer le chapelet",
+                btnStats: "📊 Voir les statistiques",
+                btnBack: "⬅ Retour",
+                btnCancel: "✕ Annuler",
+                btnNext: "Suivant ➔",
+                statsTitle: "Vos statistiques de chapelet",
+                statWeek: "7 derniers jours",
+                statMonth: "30 derniers jours",
+                statTotal: "Sessions totales",
+                statTime: "Temps total",
+                btnBackSetup: "Retour aux paramètres",
+                autoManual: "Manuel (Appuyer sur Suivant)",
+                auto10: "Auto (10 secondes)",
+                auto15: "Auto (15 secondes)",
+                mysteries: {
+                    joyful: "Mystères Joyeux",
+                    sorrowful: "Mystères Douloureux",
+                    glorious: "Mystères Glorieux",
+                    luminous: "Mystères Lumineux",
+                    traditional: "Traditionnel complet (Joyeux + Douloureux + Glorieux)",
+                    modern: "Moderne complet (Les 4 groupes)"
+                },
+                signOfCross: "Signe de la Croix.",
+                settings: "Paramètres",
+                mysteriesLabel: "Mystères",
+                confirmCancel: "Êtes-vous sûr de vouloir annuler ce chapelet ?",
+                completed: "Chapelet terminé en"
+            },
+            la: {
+                title: "🌹 Rosarium",
+                labelLang1: "Lingua 1 (Columna sinistra)",
+                labelLang2: "Lingua 2 (Columna dextra)",
+                labelDescLang: "Lingua descriptionum",
+                labelMystery: "Mysteria",
+                labelAutoMode: "Modus progressionis Ave Maria",
+                labelVoice: "Dux vocis (Lingua 1)",
+                btnStart: "Incipere Rosarium",
+                btnStats: "📊 Videre statistica",
+                btnBack: "⬅ Retro",
+                btnCancel: "✕ Cancellare",
+                btnNext: "Proximo ➔",
+                statsTitle: "Statistica Rosarii tui",
+                statWeek: "Ultimi 7 dies",
+                statMonth: "Ultimi 30 dies",
+                statTotal: "Sessiones totales",
+                statTime: "Tempus totale",
+                btnBackSetup: "Redire ad configurationem",
+                autoManual: "Manuale (Premere Proximo)",
+                auto10: "Automaticum (10 secundis)",
+                auto15: "Automaticum (15 secundis)",
+                mysteries: {
+                    joyful: "Mysteria Gaudiosa",
+                    sorrowful: "Mysteria Dolorosa",
+                    glorious: "Mysteria Gloriosa",
+                    luminous: "Mysteria Luminosa",
+                    traditional: "Traditionalia completa (Gaudiosa + Dolorosa + Gloriosa)",
+                    modern: "Moderna completa (Omnia 4)"
+                },
+                signOfCross: "Signum Crucis.",
+                settings: "Configurationes",
+                mysteriesLabel: "Mysteria",
+                confirmCancel: "Esne certus te velle hoc Rosarium cancellare?",
+                completed: "Rosarium completum in"
+            },
+            th: {
+                title: "🌹 สายประคำ",
+                labelLang1: "ภาษาที่ 1 (คอลัมน์ซ้าย)",
+                labelLang2: "ภาษาที่ 2 (คอลัมน์ขวา)",
+                labelDescLang: "ภาษาคำอธิบาย",
+                labelMystery: "ชุดธรรมล้ำลึก",
+                labelAutoMode: "โหมดการเลื่อนวันทามารีย์",
+                labelVoice: "เสียงนำสวด (ภาษาที่ 1)",
+                btnStart: "เริ่มสวดสายประคำ",
+                btnStats: "📊 ดูสถิติ",
+                btnBack: "⬅ ย้อนกลับ",
+                btnCancel: "✕ ยกเลิก",
+                btnNext: "ถัดไป ➔",
+                statsTitle: "สถิติการสวดสายประคำ",
+                statWeek: "7 วันที่ผ่านมา",
+                statMonth: "30 วันที่ผ่านมา",
+                statTotal: "เซสชันทั้งหมด",
+                statTime: "เวลาทั้งหมด",
+                btnBackSetup: "กลับไปที่การตั้งค่า",
+                autoManual: "ด้วยตนเอง (กดถัดไป)",
+                auto10: "อัตโนมัติ (10 วินาที)",
+                auto15: "อัตโนมัติ (15 วินาที)",
+                mysteries: {
+                    joyful: "ธรรมล้ำลึกแห่งความปีติยินดี",
+                    sorrowful: "ธรรมล้ำลึกแห่งความทุกข์ทรมาน",
+                    glorious: "ธรรมล้ำลึกแห่งพระสิริรุ่งโรจน์",
+                    luminous: "ธรรมล้ำลึกแห่งความสว่าง",
+                    traditional: "แบบดั้งเดิม (ปีติ + ทุกข์ + สิริ)",
+                    modern: "แบบสมัยใหม่ (ทั้ง 4 ชุด)"
+                },
+                signOfCross: "เครื่องหมายกางเขน",
+                settings: "การตั้งค่า",
+                mysteriesLabel: "ธรรมล้ำลึก",
+                confirmCancel: "คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการสวดนี้?",
+                completed: "สวดเสร็จในเวลา"
+            }
+        };
+
+        // --- MYSTERY IMAGES (SVG inline) ---
+        const mysteryImages = {
+            joyful: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="45" fill="#fff9e6" stroke="#f1c40f" stroke-width="2"/><path d="M50 25 L55 40 L70 40 L58 50 L63 65 L50 55 L37 65 L42 50 L30 40 L45 40 Z" fill="#f1c40f"/></svg>`,
+            sorrowful: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="45" fill="#f5e6e6" stroke="#8e44ad" stroke-width="2"/><path d="M50 20 L50 80 M30 45 L70 45" stroke="#8e44ad" stroke-width="4" stroke-linecap="round"/></svg>`,
+            glorious: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="45" fill="#fffbe6" stroke="#e67e22" stroke-width="2"/><circle cx="50" cy="50" r="25" fill="none" stroke="#e67e22" stroke-width="3"/><path d="M50 15 L50 25 M50 75 L50 85 M15 50 L25 50 M75 50 L85 50 M25 25 L32 32 M75 25 L68 32 M25 75 L32 68 M75 75 L68 68" stroke="#e67e22" stroke-width="3" stroke-linecap="round"/></svg>`,
+            luminous: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="45" fill="#e6f0ff" stroke="#3498db" stroke-width="2"/><circle cx="50" cy="50" r="18" fill="#3498db" opacity="0.3"/><path d="M50 20 L50 80 M20 50 L80 50 M30 30 L70 70 M70 30 L30 70" stroke="#3498db" stroke-width="2" stroke-linecap="round"/></svg>`
+        };
+
+        // --- DATA ---
+        const rosaryData = {
+            prayers: {
+                signumCrucis: { la: "In nomine Patris, et Filii, et Spiritus Sancti. Amen.", fr: "Au nom du Père, et du Fils, et du Saint-Esprit. Amen.", en: "In the name of the Father, and of the Son, and of the Holy Spirit. Amen.", th: "เดชะพระนาม พระบิดา และพระบุตร และพระจิต อาแมน" },
+                credo: { la: "Credo in Deum Patrem omnipotentem, Creatorem caeli et terrae. Et in Iesum Christum, Filium eius unicum, Dominum nostrum, qui conceptus est de Spiritu Sancto, natus ex Maria Virgine, passus sub Pontio Pilato, crucifixus, mortuus, et sepultus, descendit ad inferos, tertia die resurrexit a mortuis, ascendit ad caelos, sedet ad dexteram Dei Patris omnipotentis, inde venturus est iudicare vivos et mortuos. Credo in Spiritum Sanctum, sanctam Ecclesiam catholicam, sanctorum communionem, remissionem peccatorum, carnis resurrectionem, vitam aeternam. Amen.", fr: "Je crois en Dieu, le Père tout-puissant, créateur du ciel et de la terre. Et en Jésus-Christ, son Fils unique, notre Seigneur, qui a été conçu du Saint-Esprit, est né de la Vierge Marie, a souffert sous Ponce Pilate, a été crucifié, est mort et a été enseveli, est descendu aux enfers, le troisième jour est ressuscité des morts, est monté aux cieux, est assis à la droite de Dieu, le Père tout-puissant, d'où il viendra juger les vivants et les morts. Je crois en l'Esprit-Saint, à la sainte Église catholique, à la communion des saints, à la rémission des péchés, à la résurrection de la chair, à la vie éternelle. Amen.", en: "I believe in God, the Father almighty, Creator of heaven and earth, and in Jesus Christ, his only Son, our Lord, who was conceived by the Holy Spirit, born of the Virgin Mary, suffered under Pontius Pilate, was crucified, died and was buried; he descended into hell; on the third day he rose again from the dead; he ascended into heaven, and is seated at the right hand of God the Father almighty; from there he will come to judge the living and the dead. I believe in the Holy Spirit, the holy catholic Church, the communion of saints, the forgiveness of sins, the resurrection of the body, and life everlasting. Amen.", th: "ข้าพเจ้าเชื่อในพระเจ้า พระบิดาผู้ทรงสรรพานุภาพ ทรงเนรมิตฟ้าดิน และเชื่อในพระเยซูคริสต์ พระบุตรเพียงองค์เดียวของพระองค์ พระเจ้าของข้าพเจ้าทั้งหลาย ผู้ทรงปฏิสนธิโดยพระจิตเจ้า ประสูติจากพระนางมารีย์พรหมจารี ทรงทนทุกข์ทรมานสมัยปอนทิอัสปิลาต ถูกตรึงกางเขน สิ้นพระชนม์ และถูกฝังไว้ เสด็จลงสู่แดนมรณะ วันที่สามทรงกลับคืนพระชนม์ เสด็จขึ้นสวรรค์ ประทับเบื้องขวาพระเจ้าพระบิดาผู้ทรงสรรพานุภาพ จากที่นั่นจะเสด็จมาพิพากษาผู้เป็นและผู้ตาย ข้าพเจ้าเชื่อในพระจิตเจ้า พระศาสนจักรศักดิ์สิทธิ์คาทอลิก สมาคมธรรมิกชน การอภัยบาป การกลับคืนชีพของร่างกาย และชีวิตนิรันดร อาแมน" },
+                paterNoster: { la: "Pater Noster, qui es in caelis, sanctificetur nomen tuum. Adveniat regnum tuum. Fiat voluntas tua, sicut in caelo et in terra. Panem nostrum quotidianum da nobis hodie. Et dimitte nobis debita nostra, sicut et nos dimittimus debitoribus nostris. Et ne nos inducas in tentationem, sed libera nos a malo. Amen.", fr: "Notre Père, qui es aux cieux, que ton nom soit sanctifié, que ton règne vienne, que ta volonté soit faite sur la terre comme au ciel. Donne-nous aujourd'hui notre pain de ce jour. Pardonne-nous nos offenses, comme nous pardonnons aussi à ceux qui nous ont offensés. Et ne nous laisse pas entrer en tentation, mais délivre-nous du Mal. Amen.", en: "Our Father, Who art in heaven, hallowed be Thy name. Thy kingdom come, Thy will be done, on earth as it is in heaven. Give us this day our daily bread. And forgive us our trespasses, as we forgive those who trespass against us. And lead us not into temptation, but deliver us from evil. Amen.", th: "ข้าแต่พระบิดาของข้าพเจ้าทั้งหลาย พระองค์สถิตในสวรรค์ ขอให้พระนามของพระองค์เป็นที่สักการะ ขอให้พระอาณาจักรของพระองค์มาถึง ขอให้พระประสงค์ของพระองค์สำเร็จบนแผ่นดินเหมือนในสวรรค์ ขอโปรดประทานอาหารประจำวันแก่ข้าพเจ้าทั้งหลายในวันนี้ ขอโปรดอภัยบาปของข้าพเจ้า เหมือนข้าพเจ้าอภัยผู้ที่ทำผิดต่อข้าพเจ้า และขออย่าให้ข้าพเจ้าตกในสิ่งยั่วยวน แต่ขอโปรดช่วยข้าพเจ้าให้พ้นจากความชั่วร้าย อาแมน" },
+                aveMaria: { la: "Ave Maria, gratia plena, Dominus tecum. Benedicta tu in mulieribus, et benedictus fructus ventris tui, Iesus. Sancta Maria, Mater Dei, ora pro nobis peccatoribus, nunc et in hora mortis nostrae. Amen.", fr: "Je vous salue, Marie, pleine de grâce, le Seigneur est avec vous. Vous êtes bénie entre toutes les femmes, et Jésus, le fruit de vos entrailles, est béni. Sainte Marie, Mère de Dieu, priez pour nous, pauvres pécheurs, maintenant et à l'heure de notre mort. Amen.", en: "Hail Mary, full of grace, the Lord is with thee. Blessed art thou amongst women, and blessed is the fruit of thy womb, Jesus. Holy Mary, Mother of God, pray for us sinners, now and at the hour of our death. Amen.", th: "วันทามารีย์ เปี่ยมด้วยพระหรรษทาน พระเจ้าสถิตกับท่าน ท่านได้รับพระพรยิ่งกว่าสตรีทั้งหลาย และพระเยซู พระบุตรของท่านได้รับพระพร วันทามารีย์ พระมารดาของพระเจ้า โปรดภาวนาเพื่อข้าพเจ้าทั้งหลาย ผู้เป็นคนบาป บัดนี้และเมื่อถึงเวลาเสียชีวิตของข้าพเจ้า อาแมน" },
+                gloriaPatri: { la: "Gloria Patri, et Filio, et Spiritui Sancto. Sicut erat in principio, et nunc, et semper, et in saecula saeculorum. Amen.", fr: "Gloire au Père, au Fils et au Saint-Esprit. Comme il était au commencement, maintenant et toujours, et dans les siècles des siècles. Amen.", en: "Glory be to the Father, and to the Son, and to the Holy Spirit. As it was in the beginning, is now, and ever shall be, world without end. Amen.", th: "พระสิริรุ่งโรจน์แด่พระบิดา และพระบุตร และพระจิต เช่นเดียวกับที่เป็นมาแต่แรก บัดนี้ และตลอดไปนิรันดร อาแมน" },
+                fatimaPrayer: { la: "Domine Iesu, dimitte nobis debita nostra, libera nos ab igne inferni, conduc in caelum omnes animas, praesertim illas quae maxime indigent misericordia tua.", fr: "Ô mon Jésus, pardonnez-nous nos péchés, préservez-nous du feu de l'enfer, conduisez au ciel toutes les âmes, surtout celles qui ont le plus besoin de votre miséricorde.", en: "O my Jesus, forgive us our sins, save us from the fires of hell, lead all souls to Heaven, especially those who have most need of thy mercy.", th: "โอ้พระเยซูเจ้า โปรดอภัยบาปของข้าพเจ้าทั้งหลาย โปรดช่วยข้าพเจ้าให้พ้นจากไฟนรก โปรดนำวิญญาณทั้งหลายไปสวรรค์ โดยเฉพาะอย่างยิ่งผู้ที่ต้องการพระเมตตาของพระองค์มากที่สุด" },
+                salveRegina: { la: "Salve, Regina, Mater misericordiae, vita, dulcedo, et spes nostra, salve. Ad te clamamus exsules filii Hevae. Ad te suspiramus, gementes et flentes in hac lacrimarum valle. Eia, ergo, advocata nostra, illos tuos misericordes oculos ad nos converte. Et Iesum, benedictum fructum ventris tui, nobis post hoc exsilium ostende. O clemens, O pia, O dulcis Virgo Maria. Amen.", fr: "Salut, ô Reine, Mère de miséricorde, notre vie, notre douceur et notre espérance, salut. Vers toi nous crions, enfants d'Ève exilés. Vers toi nous soupirons, gémissant et pleurant dans cette vallée de larmes. Tourne donc vers nous tes yeux miséricordieux, ô notre avocate. Et après cet exil, montre-nous Jésus, le fruit béni de tes entrailles. Ô clémente, ô pieuse, ô douce Vierge Marie. Amen.", en: "Hail, holy Queen, Mother of mercy, our life, our sweetness and our hope. To thee do we cry, poor banished children of Eve. To thee do we send up our sighs, mourning and weeping in this valley of tears. Turn then, most gracious advocate, thine eyes of mercy toward us, and after this our exile, show unto us the blessed fruit of thy womb, Jesus. O clement, O loving, O sweet Virgin Mary. Amen.", th: "วันทาพระราชินี พระมารดาแห่งพระเมตตา ชีวิต ความหวานชื่น และความหวังของข้าพเจ้า วันทา ข้าพเจ้าลูกหลานของเอวาผู้ถูกเนรเทศร้องหาพระองค์ ข้าพเจ้าถอนหายใจ คร่ำครวญและร่ำไห้ในหุบเขาน้ำตานี้ โปรดหันพระเนตรแห่งพระเมตตามายังข้าพเจ้า ผู้เป็นทนายความของข้าพเจ้า และหลังจากที่ต้องพลัดพรากนี้ โปรดแสดงพระเยซู พระบุตรผู้ได้รับพรของพระองค์แก่ข้าพเจ้า โอ้พระนางพรหมจารีมารีย์ผู้เมตตา ผู้ศักดิ์สิทธิ์ และผู้เปี่ยมด้วยความหวานชื่น อาแมน" }
+            },
+            mysteries: {
+                joyful: {
+                    name: { la: "Mysteria Gaudiosa", fr: "Mystères Joyeux", en: "Joyful Mysteries", th: "ธรรมล้ำลึกแห่งความปีติยินดี" },
+                    items: [
+                        { la: "Annuntiatio", fr: "L'Annonciation", en: "The Annunciation", th: "ทูตสวรรค์แจ้งข่าว", desc: { en: "The Angel Gabriel announces to Mary that she will conceive Jesus, the Son of God, by the power of the Holy Spirit.", fr: "L'ange Gabriel annonce à Marie qu'elle concevra Jésus, le Fils de Dieu, par la puissance du Saint-Esprit.", la: "Angelus Gabriel Mariae nuntiat eam Iesum, Filium Dei, concepturam esse per Spiritum Sanctum.", th: "ทูตสวรรค์กาเบรียลแจ้งแก่พระนางมารีย์ว่าท่านจะตั้งครรภ์พระเยซู พระบุตรของพระเจ้า โดยฤทธิ์เดชของพระจิตเจ้า
+        :root { --primary: #2c3e50; --accent: #e74c3c; --bg: #f9f6f0; --text: #333; --gold: #f1c40f; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { background: var(--bg); color: var(--text); padding: 10px; min-height: 100vh; display: flex; flex-direction: column; }
+        .hidden { display: none !important; }
+        .card { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 10px; }
+        button { background: var(--primary); color: white; border: none; padding: 12px 18px; border-radius: 8px; font-size: 1rem; width: 100%; cursor: pointer; margin-top: 8px; font-weight: 600; }
+        button.secondary { background: #ecf0f1; color: var(--text); }
+        button.danger { background: var(--accent); }
+        button:disabled { opacity: 0.5; }
+        select, input { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; background: white; }
+        label { font-weight: 600; display: block; margin-bottom: 5px; font-size: 0.9rem; color: #666; }
+        
+        /* Prayer Layout */
+        #prayer-display { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
+        .prayer-text { background: #fdfbf7; padding: 12px; border-radius: 8px; border-left: 4px solid var(--accent); height: 220px; overflow-y: auto; }
+        .prayer-text h3 { font-size: 0.75rem; color: #999; text-transform: uppercase; margin-bottom: 5px; }
+        .prayer-text p { font-size: 1.05rem; line-height: 1.5; }
+        
+        /* Mystery Banner */
+        #mystery-banner { background: var(--primary); color: white; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 10px; }
+        #mystery-banner h2 { font-size: 1.1rem; margin-bottom: 4px; }
+        #mystery-banner .mystery-desc { font-size: 0.85rem; opacity: 0.9; font-style: italic; }
+        
+        /* Intro Comment */
+        #intro-comment { background: #fff9e6; border: 1px dashed #f1c40f; padding: 10px; border-radius: 8px; margin-bottom: 10px; font-size: 0.9em; text-align: center; color: #555; }
+
+        /* Mystery Image */
+        .mystery-image-container { text-align: center; margin-bottom: 15px; }
+        .mystery-image-container svg { width: 100px; height: 100px; }
+
+        /* Rosary Beads Visual */
+        .rosary-container { width: 100%; overflow-x: auto; padding: 15px 0; background: white; border-radius: 8px; margin-bottom: 10px; box-shadow: inset 0 0 5px rgba(0,0,0,0.05); }
+        .rosary-scroll { display: flex; align-items: center; gap: 8px; padding: 0 15px; width: max-content; margin: 0 auto; }
+        .bead-group { display: flex; gap: 6px; align-items: center; }
+        .bead { width: 16px; height: 16px; border-radius: 50%; background: #ddd; transition: all 0.3s; flex-shrink: 0; }
+        .bead.small { width: 12px; height: 12px; }
+        .bead.large { width: 20px; height: 20px; background: #bdc3c7; }
+        .bead.crucifix { width: 24px; height: 24px; border-radius: 2px; background: #8e44ad; }
+        .bead.active { background: var(--accent); transform: scale(1.3); box-shadow: 0 0 10px rgba(231,76,60,0.6); z-index: 10; }
+        .bead.passed { background: var(--gold); }
+        .bead-connector { width: 15px; height: 2px; background: #ddd; }
+        
+        /* Controls */
+        .controls { display: flex; gap: 8px; align-items: center; }
+        .controls button { margin-top: 0; padding: 10px; font-size: 0.9rem; }
+        .icon-btn { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; background: #ecf0f1; color: var(--text); border-radius: 50%; padding: 0; flex-shrink: 0; }
+        .icon-btn.active { background: var(--primary); color: white; }
+        
+        /* Stats */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: center; }
+        .stat-box { background: #f8f9fa; padding: 12px; border-radius: 8px; }
+        .stat-box .number { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+        .stat-box .label { font-size: 0.75rem; color: #666; }
+        
+        .toggle-group { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .toggle-group input[type="checkbox"] { width: auto; margin: 0; transform: scale(1.3); }
+        
+        @media (max-width: 400px) { 
+            #prayer-display { grid-template-columns: 1fr; } 
+            .prayer-text { height: 200px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SETUP SCREEN -->
+    <div id="setup-screen">
+        <div class="card">
+            <h1 style="text-align:center; margin-bottom:15px;" id="app-title">🌹 Rosary</h1>
+            
+            <label id="label-lang1">Language 1 (Left Column)</label>
+            <select id="lang1">
+                <option value="la">Latin</option>
+                <option value="fr" selected>French</option>
+                <option value="en">English</option>
+                <option value="th">Thai</option>
+            </select>
+            
+            <label id="label-lang2">Language 2 (Right Column)</label>
+            <select id="lang2">
+                <option value="la" selected>Latin</option>
+                <option value="fr">French</option>
+                <option value="en">English</option>
+                <option value="th">Thai</option>
+            </select>
+
+            <label id="label-desclang">Description Language</label>
+            <select id="desc-lang" onchange="updateUILanguage()">
+                <option value="en" selected>English</option>
+                <option value="fr">Français</option>
+                <option value="la">Latin</option>
+                <option value="th">ไทย</option>
+            </select>
+            
+            <label id="label-mystery">Mystery Set</label>
+            <select id="mystery-select">
+                <option value="joyful">Joyful Mysteries</option>
+                <option value="sorrowful">Sorrowful Mysteries</option>
+                <option value="glorious">Glorious Mysteries</option>
+                <option value="luminous">Luminous Mysteries</option>
+                <option value="traditional">Full Traditional (Joyful + Sorrowful + Glorious)</option>
+                <option value="modern">Full Modern (All 4 Sets)</option>
+            </select>
+
+            <label id="label-automode">Ave Maria Advance Mode</label>
+            <select id="auto-mode-select">
+                <option value="manual">Manual (Tap Next)</option>
+                <option value="auto_10">Auto (10 seconds)</option>
+                <option value="auto_15">Auto (15 seconds)</option>
+            </select>
+
+            <div class="toggle-group">
+                <label id="label-voice">Voice Guide (Language 1)</label>
+                <input type="checkbox" id="voice-toggle" checked>
+            </div>
+            <button onclick="startRosary()" id="btn-start">Start Rosary</button>
+            <button class="secondary" style="margin-top:8px;" onclick="showStats()" id="btn-stats">📊 View Stats</button>
+        </div>
+    </div>
+
+    <!-- PRAYER SCREEN -->
+    <div id="prayer-screen" class="hidden">
+        <div id="mystery-banner">
+            <h2 id="mystery-title">Mystery</h2>
+            <div class="mystery-desc" id="mystery-desc"></div>
+        </div>
+        
+        <div id="intro-comment" class="hidden"></div>
+
+        <div class="rosary-container">
+            <div class="rosary-scroll" id="rosary-beads"></div>
+        </div>
+
+        <div id="prayer-display">
+            <div class="prayer-text" id="card1"><h3 id="lang-label1">Language 1</h3><p id="text1"></p></div>
+            <div class="prayer-text" id="card2"><h3 id="lang-label2">Language 2</h3><p id="text2"></p></div>
+        </div>
+
+        <div class="controls">
+            <button class="icon-btn" id="speaker-btn" onclick="toggleVoice()">🔊</button>
+            <button class="secondary" onclick="prevStep()" style="flex:1;" id="btn-back">⬅ Back</button>
+            <button class="danger" onclick="cancelRosary()" style="flex:1;" id="btn-cancel">✕ Cancel</button>
+            <button id="next-btn" onclick="nextStep()" style="flex:2;" id="btn-next">Next ➔</button>
+        </div>
+        <div style="text-align:center; margin-top:8px; color:#888; font-size:0.8rem;" id="progress-text">Step 1 / 100</div>
+    </div>
+
+    <!-- STATS SCREEN -->
+    <div id="stats-screen" class="hidden">
+        <div class="card">
+            <h2 style="text-align:center; margin-bottom:15px;" id="stats-title">Your Rosary Stats</h2>
+            <div class="stats-grid">
+                <div class="stat-box"><div class="number" id="stat-week">0</div><div class="label" id="stat-week-label">Last 7 Days</div></div>
+                <div class="stat-box"><div class="number" id="stat-month">0</div><div class="label" id="stat-month-label">Last 30 Days</div></div>
+                <div class="stat-box"><div class="number" id="stat-total">0</div><div class="label" id="stat-total-label">Total Sessions</div></div>
+                <div class="stat-box"><div class="number" id="stat-time">0m</div><div class="label" id="stat-time-label">Total Time</div></div>
+            </div>
+            <button class="secondary" style="margin-top:15px;" onclick="backToSetup()" id="btn-back-setup">Back to Setup</button>
+        </div>
+    </div>
+
+    <script>
+        // --- TRANSLATIONS FOR UI ---
+        const uiTranslations = {
+            en: {
+                title: "🌹 Rosary",
+                labelLang1: "Language 1 (Left Column)",
+                labelLang2: "Language 2 (Right Column)",
+                labelDescLang: "Description Language",
+                labelMystery: "Mystery Set",
+                labelAutoMode: "Ave Maria Advance Mode",
+                labelVoice: "Voice Guide (Language 1)",
+                btnStart: "Start Rosary",
+                btnStats: "📊 View Stats",
+                btnBack: "⬅ Back",
+                btnCancel: "✕ Cancel",
+                btnNext: "Next ➔",
+                statsTitle: "Your Rosary Stats",
+                statWeek: "Last 7 Days",
+                statMonth: "Last 30 Days",
+                statTotal: "Total Sessions",
+                statTime: "Total Time",
+                btnBackSetup: "Back to Setup",
+                autoManual: "Manual (Tap Next)",
+                auto10: "Auto (10 seconds)",
+                auto15: "Auto (15 seconds)",
+                mysteries: {
+                    joyful: "Joyful Mysteries",
+                    sorrowful: "Sorrowful Mysteries",
+                    glorious: "Glorious Mysteries",
+                    luminous: "Luminous Mysteries",
+                    traditional: "Full Traditional (Joyful + Sorrowful + Glorious)",
+                    modern: "Full Modern (All 4 Sets)"
+                },
+                signOfCross: "Sign of the Cross.",
+                settings: "Settings",
+                mysteriesLabel: "Mysteries",
+                confirmCancel: "Are you sure you want to cancel this Rosary?",
+                completed: "Rosary completed in"
+            },
+            fr: {
+                title: "🌹 Chapelet",
+                labelLang1: "Langue 1 (Colonne gauche)",
+                labelLang2: "Langue 2 (Colonne droite)",
+                labelDescLang: "Langue des descriptions",
+                labelMystery: "Groupe de mystères",
+                labelAutoMode: "Mode d'avancement des Ave Maria",
+                labelVoice: "Guide vocal (Langue 1)",
+                btnStart: "Commencer le chapelet",
+                btnStats: "📊 Voir les statistiques",
+                btnBack: "⬅ Retour",
+                btnCancel: "✕ Annuler",
+                btnNext: "Suivant ➔",
+                statsTitle: "Vos statistiques de chapelet",
+                statWeek: "7 derniers jours",
+                statMonth: "30 derniers jours",
+                statTotal: "Sessions totales",
+                statTime: "Temps total",
+                btnBackSetup: "Retour aux paramètres",
+                autoManual: "Manuel (Appuyer sur Suivant)",
+                auto10: "Auto (10 secondes)",
+                auto15: "Auto (15 secondes)",
+                mysteries: {
+                    joyful: "Mystères Joyeux",
+                    sorrowful: "Mystères Douloureux",
+                    glorious: "Mystères Glorieux",
+                    luminous: "Mystères Lumineux",
+                    traditional: "Traditionnel complet (Joyeux + Douloureux + Glorieux)",
+                    modern: "Moderne complet (Les 4 groupes)"
+                },
+                signOfCross: "Signe de la Croix.",
+                settings: "Paramètres",
+                mysteriesLabel: "Mystères",
+                confirmCancel: "Êtes-vous sûr de vouloir annuler ce chapelet ?",
+                completed: "Chapelet terminé en"
+            },
+            la: {
+                title: "🌹 Rosarium",
+                labelLang1: "Lingua 1 (Columna sinistra)",
+                labelLang2: "Lingua 2 (Columna dextra)",
+                labelDescLang: "Lingua descriptionum",
+                labelMystery: "Mysteria",
+                labelAutoMode: "Modus progressionis Ave Maria",
+                labelVoice: "Dux vocis (Lingua 1)",
+                btnStart: "Incipere Rosarium",
+                btnStats: "📊 Videre statistica",
+                btnBack: "⬅ Retro",
+                btnCancel: "✕ Cancellare",
+                btnNext: "Proximo ➔",
+                statsTitle: "Statistica Rosarii tui",
+                statWeek: "Ultimi 7 dies",
+                statMonth: "Ultimi 30 dies",
+                statTotal: "Sessiones totales",
+                statTime: "Tempus totale",
+                btnBackSetup: "Redire ad configurationem",
+                autoManual: "Manuale (Premere Proximo)",
+                auto10: "Automaticum (10 secundis)",
+                auto15: "Automaticum (15 secundis)",
+                mysteries: {
+                    joyful: "Mysteria Gaudiosa",
+                    sorrowful: "Mysteria Dolorosa",
+                    glorious: "Mysteria Gloriosa",
+                    luminous: "Mysteria Luminosa",
+                    traditional: "Traditionalia completa (Gaudiosa + Dolorosa + Gloriosa)",
+                    modern: "Moderna completa (Omnia 4)"
+                },
+                signOfCross: "Signum Crucis.",
+                settings: "Configurationes",
+                mysteriesLabel: "Mysteria",
+                confirmCancel: "Esne certus te velle hoc Rosarium cancellare?",
+                completed: "Rosarium completum in"
+            },
+            th: {
+                title: "🌹 สายประคำ",
+                labelLang1: "ภาษาที่ 1 (คอลัมน์ซ้าย)",
+                labelLang2: "ภาษาที่ 2 (คอลัมน์ขวา)",
+                labelDescLang: "ภาษาคำอธิบาย",
+                labelMystery: "ชุดธรรมล้ำลึก",
+                labelAutoMode: "โหมดการเลื่อนวันทามารีย์",
+                labelVoice: "เสียงนำสวด (ภาษาที่ 1)",
+                btnStart: "เริ่มสวดสายประคำ",
+                btnStats: "📊 ดูสถิติ",
+                btnBack: "⬅ ย้อนกลับ",
+                btnCancel: "✕ ยกเลิก",
+                btnNext: "ถัดไป ➔",
+                statsTitle: "สถิติการสวดสายประคำ",
+                statWeek: "7 วันที่ผ่านมา",
+                statMonth: "30 วันที่ผ่านมา",
+                statTotal: "เซสชันทั้งหมด",
+                statTime: "เวลาทั้งหมด",
+                btnBackSetup: "กลับไปที่การตั้งค่า",
+                autoManual: "ด้วยตนเอง (กดถัดไป)",
+                auto10: "อัตโนมัติ (10 วินาที)",
+                auto15: "อัตโนมัติ (15 วินาที)",
+                mysteries: {
+                    joyful: "ธรรมล้ำลึกแห่งความปีติยินดี",
+                    sorrowful: "ธรรมล้ำลึกแห่งความทุกข์ทรมาน",
+                    glorious: "ธรรมล้ำลึกแห่งพระสิริรุ่งโรจน์",
+                    luminous: "ธรรมล้ำลึกแห่งความสว่าง",
+                    traditional: "แบบดั้งเดิม (ปีติ + ทุกข์ + สิริ)",
+                    modern: "แบบสมัยใหม่ (ทั้ง 4 ชุด)"
+                },
+                signOfCross: "เครื่องหมายกางเขน",
+                settings: "การตั้งค่า",
+                mysteriesLabel: "ธรรมล้ำลึก",
+                confirmCancel: "คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการสวดนี้?",
+                completed: "สวดเสร็จในเวลา"
+            }
+        };
+
+        // --- MYSTERY IMAGES (SVG inline) ---
+        const mysteryImages = {
+            joyful: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="45" fill="#fff9e6" stroke="#f1c40f" stroke-width="2"/><path d="M50 25 L55 40 L70 40 L58 50 L63 65 L50 55 L37 65 L42 50 L30 40 L45 40 Z" fill="#f1c40f"/></svg>`,
+            sorrowful: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="45" fill="#f5e6e6" stroke="#8e44ad" stroke-width="2"/><path d="M50 20 L50 80 M30 45 L70 45" stroke="#8e44ad" stroke-width="4" stroke-linecap="round"/></svg>`,
+            glorious: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="45" fill="#fffbe6" stroke="#e67e22" stroke-width="2"/><circle cx="50" cy="50" r="25" fill="none" stroke="#e67e22" stroke-width="3"/><path d="M50 15 L50 25 M50 75 L50 85 M15 50 L25 50 M75 50 L85 50 M25 25 L32 32 M75 25 L68 32 M25 75 L32 68 M75 75 L68 68" stroke="#e67e22" stroke-width="3" stroke-linecap="round"/></svg>`,
+            luminous: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="45" fill="#e6f0ff" stroke="#3498db" stroke-width="2"/><circle cx="50" cy="50" r="18" fill="#3498db" opacity="0.3"/><path d="M50 20 L50 80 M20 50 L80 50 M30 30 L70 70 M70 30 L30 70" stroke="#3498db" stroke-width="2" stroke-linecap="round"/></svg>`
+        };
+
+        // --- DATA ---
+        const rosaryData = {
+            prayers: {
+                signumCrucis: { la: "In nomine Patris, et Filii, et Spiritus Sancti. Amen.", fr: "Au nom du Père, et du Fils, et du Saint-Esprit. Amen.", en: "In the name of the Father, and of the Son, and of the Holy Spirit. Amen.", th: "เดชะพระนาม พระบิดา และพระบุตร และพระจิต อาแมน" },
+                credo: { la: "Credo in Deum Patrem omnipotentem, Creatorem caeli et terrae. Et in Iesum Christum, Filium eius unicum, Dominum nostrum, qui conceptus est de Spiritu Sancto, natus ex Maria Virgine, passus sub Pontio Pilato, crucifixus, mortuus, et sepultus, descendit ad inferos, tertia die resurrexit a mortuis, ascendit ad caelos, sedet ad dexteram Dei Patris omnipotentis, inde venturus est iudicare vivos et mortuos. Credo in Spiritum Sanctum, sanctam Ecclesiam catholicam, sanctorum communionem, remissionem peccatorum, carnis resurrectionem, vitam aeternam. Amen.", fr: "Je crois en Dieu, le Père tout-puissant, créateur du ciel et de la terre. Et en Jésus-Christ, son Fils unique, notre Seigneur, qui a été conçu du Saint-Esprit, est né de la Vierge Marie, a souffert sous Ponce Pilate, a été crucifié, est mort et a été enseveli, est descendu aux enfers, le troisième jour est ressuscité des morts, est monté aux cieux, est assis à la droite de Dieu, le Père tout-puissant, d'où il viendra juger les vivants et les morts. Je crois en l'Esprit-Saint, à la sainte Église catholique, à la communion des saints, à la rémission des péchés, à la résurrection de la chair, à la vie éternelle. Amen.", en: "I believe in God, the Father almighty, Creator of heaven and earth, and in Jesus Christ, his only Son, our Lord, who was conceived by the Holy Spirit, born of the Virgin Mary, suffered under Pontius Pilate, was crucified, died and was buried; he descended into hell; on the third day he rose again from the dead; he ascended into heaven, and is seated at the right hand of God the Father almighty; from there he will come to judge the living and the dead. I believe in the Holy Spirit, the holy catholic Church, the communion of saints, the forgiveness of sins, the resurrection of the body, and life everlasting. Amen.", th: "ข้าพเจ้าเชื่อในพระเจ้า พระบิดาผู้ทรงสรรพานุภาพ ทรงเนรมิตฟ้าดิน และเชื่อในพระเยซูคริสต์ พระบุตรเพียงองค์เดียวของพระองค์ พระเจ้าของข้าพเจ้าทั้งหลาย ผู้ทรงปฏิสนธิโดยพระจิตเจ้า ประสูติจากพระนางมารีย์พรหมจารี ทรงทนทุกข์ทรมานสมัยปอนทิอัสปิลาต ถูกตรึงกางเขน สิ้นพระชนม์ และถูกฝังไว้ เสด็จลงสู่แดนมรณะ วันที่สามทรงกลับคืนพระชนม์ เสด็จขึ้นสวรรค์ ประทับเบื้องขวาพระเจ้าพระบิดาผู้ทรงสรรพานุภาพ จากที่นั่นจะเสด็จมาพิพากษาผู้เป็นและผู้ตาย ข้าพเจ้าเชื่อในพระจิตเจ้า พระศาสนจักรศักดิ์สิทธิ์คาทอลิก สมาคมธรรมิกชน การอภัยบาป การกลับคืนชีพของร่างกาย และชีวิตนิรันดร อาแมน" },
+                paterNoster: { la: "Pater Noster, qui es in caelis, sanctificetur nomen tuum. Adveniat regnum tuum. Fiat voluntas tua, sicut in caelo et in terra. Panem nostrum quotidianum da nobis hodie. Et dimitte nobis debita nostra, sicut et nos dimittimus debitoribus nostris. Et ne nos inducas in tentationem, sed libera nos a malo. Amen.", fr: "Notre Père, qui es aux cieux, que ton nom soit sanctifié, que ton règne vienne, que ta volonté soit faite sur la terre comme au ciel. Donne-nous aujourd'hui notre pain de ce jour. Pardonne-nous nos offenses, comme nous pardonnons aussi à ceux qui nous ont offensés. Et ne nous laisse pas entrer en tentation, mais délivre-nous du Mal. Amen.", en: "Our Father, Who art in heaven, hallowed be Thy name. Thy kingdom come, Thy will be done, on earth as it is in heaven. Give us this day our daily bread. And forgive us our trespasses, as we forgive those who trespass against us. And lead us not into temptation, but deliver us from evil. Amen.", th: "ข้าแต่พระบิดาของข้าพเจ้าทั้งหลาย พระองค์สถิตในสวรรค์ ขอให้พระนามของพระองค์เป็นที่สักการะ ขอให้พระอาณาจักรของพระองค์มาถึง ขอให้พระประสงค์ของพระองค์สำเร็จบนแผ่นดินเหมือนในสวรรค์ ขอโปรดประทานอาหารประจำวันแก่ข้าพเจ้าทั้งหลายในวันนี้ ขอโปรดอภัยบาปของข้าพเจ้า เหมือนข้าพเจ้าอภัยผู้ที่ทำผิดต่อข้าพเจ้า และขออย่าให้ข้าพเจ้าตกในสิ่งยั่วยวน แต่ขอโปรดช่วยข้าพเจ้าให้พ้นจากความชั่วร้าย อาแมน" },
+                aveMaria: { la: "Ave Maria, gratia plena, Dominus tecum. Benedicta tu in mulieribus, et benedictus fructus ventris tui, Iesus. Sancta Maria, Mater Dei, ora pro nobis peccatoribus, nunc et in hora mortis nostrae. Amen.", fr: "Je vous salue, Marie, pleine de grâce, le Seigneur est avec vous. Vous êtes bénie entre toutes les femmes, et Jésus, le fruit de vos entrailles, est béni. Sainte Marie, Mère de Dieu, priez pour nous, pauvres pécheurs, maintenant et à l'heure de notre mort. Amen.", en: "Hail Mary, full of grace, the Lord is with thee. Blessed art thou amongst women, and blessed is the fruit of thy womb, Jesus. Holy Mary, Mother of God, pray for us sinners, now and at the hour of our death. Amen.", th: "วันทามารีย์ เปี่ยมด้วยพระหรรษทาน พระเจ้าสถิตกับท่าน ท่านได้รับพระพรยิ่งกว่าสตรีทั้งหลาย และพระเยซู พระบุตรของท่านได้รับพระพร วันทามารีย์ พระมารดาของพระเจ้า โปรดภาวนาเพื่อข้าพเจ้าทั้งหลาย ผู้เป็นคนบาป บัดนี้และเมื่อถึงเวลาเสียชีวิตของข้าพเจ้า อาแมน" },
+                gloriaPatri: { la: "Gloria Patri, et Filio, et Spiritui Sancto. Sicut erat in principio, et nunc, et semper, et in saecula saeculorum. Amen.", fr: "Gloire au Père, au Fils et au Saint-Esprit. Comme il était au commencement, maintenant et toujours, et dans les siècles des siècles. Amen.", en: "Glory be to the Father, and to the Son, and to the Holy Spirit. As it was in the beginning, is now, and ever shall be, world without end. Amen.", th: "พระสิริรุ่งโรจน์แด่พระบิดา และพระบุตร และพระจิต เช่นเดียวกับที่เป็นมาแต่แรก บัดนี้ และตลอดไปนิรันดร อาแมน" },
+                fatimaPrayer: { la: "Domine Iesu, dimitte nobis debita nostra, libera nos ab igne inferni, conduc in caelum omnes animas, praesertim illas quae maxime indigent misericordia tua.", fr: "Ô mon Jésus, pardonnez-nous nos péchés, préservez-nous du feu de l'enfer, conduisez au ciel toutes les âmes, surtout celles qui ont le plus besoin de votre miséricorde.", en: "O my Jesus, forgive us our sins, save us from the fires of hell, lead all souls to Heaven, especially those who have most need of thy mercy.", th: "โอ้พระเยซูเจ้า โปรดอภัยบาปของข้าพเจ้าทั้งหลาย โปรดช่วยข้าพเจ้าให้พ้นจากไฟนรก โปรดนำวิญญาณทั้งหลายไปสวรรค์ โดยเฉพาะอย่างยิ่งผู้ที่ต้องการพระเมตตาของพระองค์มากที่สุด" },
+                salveRegina: { la: "Salve, Regina, Mater misericordiae, vita, dulcedo, et spes nostra, salve. Ad te clamamus exsules filii Hevae. Ad te suspiramus, gementes et flentes in hac lacrimarum valle. Eia, ergo, advocata nostra, illos tuos misericordes oculos ad nos converte. Et Iesum, benedictum fructum ventris tui, nobis post hoc exsilium ostende. O clemens, O pia, O dulcis Virgo Maria. Amen.", fr: "Salut, ô Reine, Mère de miséricorde, notre vie, notre douceur et notre espérance, salut. Vers toi nous crions, enfants d'Ève exilés. Vers toi nous soupirons, gémissant et pleurant dans cette vallée de larmes. Tourne donc vers nous tes yeux miséricordieux, ô notre avocate. Et après cet exil, montre-nous Jésus, le fruit béni de tes entrailles. Ô clémente, ô pieuse, ô douce Vierge Marie. Amen.", en: "Hail, holy Queen, Mother of mercy, our life, our sweetness and our hope. To thee do we cry, poor banished children of Eve. To thee do we send up our sighs, mourning and weeping in this valley of tears. Turn then, most gracious advocate, thine eyes of mercy toward us, and after this our exile, show unto us the blessed fruit of thy womb, Jesus. O clement, O loving, O sweet Virgin Mary. Amen.", th: "วันทาพระราชินี พระมารดาแห่งพระเมตตา ชีวิต ความหวานชื่น และความหวังของข้าพเจ้า วันทา ข้าพเจ้าลูกหลานของเอวาผู้ถูกเนรเทศร้องหาพระองค์ ข้าพเจ้าถอนหายใจ คร่ำครวญและร่ำไห้ในหุบเขาน้ำตานี้ โปรดหันพระเนตรแห่งพระเมตตามายังข้าพเจ้า ผู้เป็นทนายความของข้าพเจ้า และหลังจากที่ต้องพลัดพรากนี้ โปรดแสดงพระเยซู พระบุตรผู้ได้รับพรของพระองค์แก่ข้าพเจ้า โอ้พระนางพรหมจารีมารีย์ผู้เมตตา ผู้ศักดิ์สิทธิ์ และผู้เปี่ยมด้วยความหวานชื่น อาแมน" }
+            },
+            mysteries: {
+                joyful: {
+                    name: { la: "Mysteria Gaudiosa", fr: "Mystères Joyeux", en: "Joyful Mysteries", th: "ธรรมล้ำลึกแห่งความปีติยินดี" },
+                    items: [
+                        { la: "Annuntiatio", fr: "L'Annonciation", en: "The Annunciation", th: "ทูตสวรรค์แจ้งข่าว", desc: { en: "The Angel Gabriel announces to Mary that she will conceive Jesus, the Son of God, by the power of the Holy Spirit.", fr: "L'ange Gabriel annonce à Marie qu'elle concevra Jésus, le Fils de Dieu, par la puissance du Saint-Esprit.", la: "Angelus Gabriel Mariae nuntiat eam Iesum, Filium Dei, concepturam esse per Spiritum Sanctum.", th: "ทูตสวรรค์กาเบรียลแจ้งแก่พระนางมารีย์ว่าท่านจะตั้งครรภ์พระเยซู พระบุตรของพระเจ้า โดยฤทธิ์เดชของพระจิตเจ้า
